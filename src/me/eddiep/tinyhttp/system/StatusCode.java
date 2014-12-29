@@ -1,5 +1,8 @@
 package me.eddiep.tinyhttp.system;
 
+/**
+ * Server status codes that can be responded with.
+ */
 public enum StatusCode {
     Continue(100),
     OK(200),
