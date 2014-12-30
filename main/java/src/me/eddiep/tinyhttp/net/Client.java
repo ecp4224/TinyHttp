@@ -140,13 +140,13 @@ public class Client {
 
                 Response respond = new Response(Client.this);
 
+                respond = server.invokeForRequest(requestInfo, respond);
+
                 if (respond instanceof StreamResponse && ((StreamResponse)respond).getOutputStream() != null) {
                     ((StreamResponse)respond).getOutputStream().flush();
                 } else if (respond.streamResponse != null && respond.streamResponse.getOutputStream() != null) {
                     respond.streamResponse.getOutputStream().flush();
                 } else {
-                    respond = server.invokeForRequest(requestInfo, respond);
-
                     if (!respond.hasHeader("Content-Type"))
                         respond.addHeader("Content-Type", "text/html; charset=UTF-8");
 

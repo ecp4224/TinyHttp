@@ -7,6 +7,8 @@ import me.eddiep.tinyhttp.net.Request;
 import me.eddiep.tinyhttp.net.Response;
 import me.eddiep.tinyhttp.net.http.StatusCode;
 
+import java.io.IOException;
+
 public class DefaultTinyListener implements TinyListener {
 
     @GetHandler(requestPath = "/wat.*")
