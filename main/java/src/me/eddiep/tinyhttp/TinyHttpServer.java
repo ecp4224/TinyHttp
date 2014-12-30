@@ -141,8 +141,8 @@ public class TinyHttpServer {
     }
 
     /**
-     * Get the buffer length used when sending large files. tinyhttp only uses this when {@link TinyHttpServer#isServingFileSystem()} is true and
-     * when sending large data.
+     * Get the buffer length used when sending large files and reading large files. tinyhttp uses this when {@link TinyHttpServer#isServingFileSystem()} is true and
+     * when sending large data, and when a large POST/PUT request is made.
      * @return The buffer data length used when sending large data
      */
     public final int getBufferDataLength() {
@@ -150,8 +150,8 @@ public class TinyHttpServer {
     }
 
     /**
-     * Set the buffer length used when sending large files. tinyhttp only uses this when {@link TinyHttpServer#isServingFileSystem()} is true and
-     * when sending large data.
+     * Set the buffer length used when sending large files and reading large files. tinyhttp uses this when {@link TinyHttpServer#isServingFileSystem()} is true and
+     * when sending large data, and when a large POST/PUT request is made.
      * @param length The buffer data length to use
      */
     public final void setBufferDataLength(int length) {

@@ -3,6 +3,9 @@ package me.eddiep.tinyhttp.net;
 import me.eddiep.tinyhttp.TinyHttpServer;
 import me.eddiep.tinyhttp.net.http.HttpMethod;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.Charset;
 import java.util.HashMap;
 
 public class Request {
@@ -12,6 +15,7 @@ public class Request {
     private String httpVersion;
     private TinyHttpServer server;
     private HashMap<String, String> headers = new HashMap<String, String>();
+    private InputStream contentStream;
 
     Request(String requestPath, HttpMethod method, String httpVersion, Client client, TinyHttpServer server) {
         this.requestPath = requestPath;
@@ -75,6 +79,45 @@ public class Request {
     void addHeader(String property, String value) {
         if (!headers.containsKey(property))
             headers.put(property, value);
+    }
+
+    void setRawContentStream(InputStream stream) {
+        this.contentStream = stream;
+    }
+
+    /**
+     * Get the {@link java.io.InputStream} used for reading the enclosed content of this request.
+     * If no content is enclosed in this request, then this method will return null
+     * @return The {@link java.io.InputStream} used for reading the enclosed content or null if no content exists
+     */
+    public InputStream getContentStream() {
+        return contentStream;
+    }
+
+    /**
+     * Read the enclosed content of this request as a {@link java.lang.String}
+     * @return The enclosed content of this request, or null if no content exists
+     * @throws IOException This exception is thrown if there was an error reading the content
+     */
+    public String getContentAsString() throws IOException {
+        if (contentStream != null) {
+            long length = Long.parseLong(getHeaderValue("Content-Length"));
+            if (length >= Integer.MAX_VALUE) {
+                Charset ASCII = Charset.forName("ASCII");
+                byte[] data = new byte[server.getBufferDataLength()];
+                StringBuilder builder = new StringBuilder();
+                int read;
+                while ((read = contentStream.read(data)) != -1) {
+                    builder.append(new String(data, 0, read, ASCII));
+                }
+                return builder.toString();
+            } else {
+                byte[] data = new byte[(int)length];
+                contentStream.read(data);
+                return new String(data, Charset.forName("ASCII"));
+            }
+        }
+        return null;
     }
 
     /**

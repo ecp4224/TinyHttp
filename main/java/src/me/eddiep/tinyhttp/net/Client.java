@@ -97,11 +97,13 @@ public class Client {
             try {
                 reader = new BufferedReader(new InputStreamReader(client.getInputStream()));
 
+                int readCount = 0;
                 String request = reader.readLine();
                 if (request == null) {
                     server.closeClient(Client.this);
                     return;
                 }
+                readCount += request.length();
                 String[] info = request.split(" ");
                 if (info.length != 3) {
                     server.closeClient(Client.this);
@@ -119,6 +121,16 @@ public class Client {
                         String value = line.split(":")[1].trim();
 
                         requestInfo.addHeader(property, value);
+                    }
+                    readCount += line.length();
+                }
+
+                if ((requestInfo.getRequestMethod() == HttpMethod.POST || requestInfo.getRequestMethod() == HttpMethod.PUT) && requestInfo.hasHeader("Content-Length")) {
+                    long length = Long.parseLong(requestInfo.getHeaderValue("Content-Length"));
+
+                    long skipped = client.getInputStream().skip(readCount);
+                    if (skipped > 0) {
+                        requestInfo.setRawContentStream(client.getInputStream());
                     }
                 }
 
