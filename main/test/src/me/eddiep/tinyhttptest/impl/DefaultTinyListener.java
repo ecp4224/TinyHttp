@@ -1,4 +1,4 @@
-package me.eddiep.tinyhttp.test.impl;
+package me.eddiep.tinyhttptest.impl;
 
 import me.eddiep.tinyhttp.TinyListener;
 import me.eddiep.tinyhttp.annotations.GetHandler;
