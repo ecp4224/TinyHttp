@@ -1,7 +1,16 @@
 #TinyHttp
 TinyHttp is a small, lightweight http server API for Java. It allows you to dynamiclly respond to requests in java code.
 
-##How to use
+##Features
+
+* Respond dynamiclly to responses using java code
+* Serve files from the file system
+* Easy to use API
+
+##How to respond dynamiclly
+
+TinyHttp allows you to dynamiclly respond to requests made by a client using java code. This can be acomplished by creating
+a TinyListener class.
 
 An example listener class looks something like this:
 
