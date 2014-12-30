@@ -6,6 +6,7 @@ import java.util.Map;
 
 public class Response {
     private String content = "";
+    byte[] rawContents;
     private Client client;
     private StatusCode statusCode = StatusCode.OK;
     private HashMap<String, String> headers = new HashMap<String, String>();
@@ -28,6 +29,25 @@ public class Response {
      */
     public void setStatusCode(StatusCode code) {
         this.statusCode = code;
+    }
+
+    /**
+     * Get the content type of this response.
+     * @return The content type of this response as a {@link java.lang.String}
+     */
+    public String getContentType() {
+        if (!hasHeader("Content-Type"))
+            addHeader("Content-Type", "text/html");
+
+        return headers.get("Content-Type");
+    }
+
+    /**
+     * Set the content type of this response.
+     * @param type The content type of this response as a {@link java.lang.String}
+     */
+    public void setContentType(String type) {
+        addHeader("Content-Type", type);
     }
 
     /**
@@ -80,6 +100,15 @@ public class Response {
      */
     public String getContent() {
         return content;
+    }
+
+    /**
+     * Set the raw content of this response. The raw content is automatically generated after the request has been processed, but you
+     * can prevent this by setting your own raw content. <b>Setting a raw content will ignore {@link Response#getContent()}</b>
+     * @param data The raw content to respond with.
+     */
+    public void setRawContent(byte[] data) {
+        this.rawContents = data;
     }
 
     /**

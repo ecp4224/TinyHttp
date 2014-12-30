@@ -14,17 +14,6 @@ public class DefaultTinyListener implements TinyListener {
         respond.echo("hi");
     }
 
-    @GetHandler(requestPath = "/index.html|/")
-    public void index(Request info, Response respond) {
-        respond.echo(
-                "<html>\n" +
-                "    <body>\n" +
-                "        <h1>Hello " + info.getClient().getSocket().getInetAddress().toString().substring(1) + "!</h1>\n" +
-                "    </body>\n" +
-                "</html>"
-        );
-    }
-
     @GetHandler(requestPath = "/api/[a-z]+")
     @PostHandler(requestPath = "/api/[a-z]+")
     public void api(Request info, Response respond) {

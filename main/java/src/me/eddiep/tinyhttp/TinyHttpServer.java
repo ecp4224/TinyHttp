@@ -6,11 +6,13 @@ import me.eddiep.tinyhttp.annotations.PostHandler;
 import me.eddiep.tinyhttp.annotations.PutHandler;
 import me.eddiep.tinyhttp.system.*;
 
-import java.io.IOException;
+import java.io.*;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.nio.ByteBuffer;
+import java.nio.file.AccessDeniedException;
 import java.security.InvalidParameterException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -21,6 +23,8 @@ import java.util.*;
  * by overriding the {@link TinyHttpServer#onStart()} method and the {@link me.eddiep.tinyhttp.TinyHttpServer#onStop()} method
  */
 public class TinyHttpServer {
+    private boolean serveFileSystem = true;
+    private String root = "";
     private ArrayList<Client> connectedClients = new ArrayList<Client>();
     private int port;
     private int timeout = 300000;
@@ -44,8 +48,93 @@ public class TinyHttpServer {
      * @param listener The listener class that will be handling requests
      */
     public TinyHttpServer(int port, TinyListener listener) {
+        this(port, listener, true);
+    }
+
+    /**
+     * Create a new instance of a TinyHttpServer with a custom http port to listen to
+     *
+     * @see me.eddiep.tinyhttp.TinyHttpServer#serveFileSystem(boolean)
+     * @param port The port to listen to
+     * @param listener The listener class that will be handling requests
+     * @param serveFileSystem Whether this tinyhttp server will serve the filesystem. See {@link me.eddiep.tinyhttp.TinyHttpServer#serveFileSystem(boolean)}
+     */
+    public TinyHttpServer(int port, TinyListener listener, boolean serveFileSystem) {
         this.port = port;
         this.listener = listener;
+        this.serveFileSystem = serveFileSystem;
+
+        if (serveFileSystem)
+            MimeTypes.loadMimeTypes();
+    }
+
+    /**
+     * Get the root path for this tinyhttp server. The root path is used to find static files if
+     * no method in the {@link me.eddiep.tinyhttp.TinyListener} class handled the client's request.
+     * @return The root directory as a {@link java.lang.String}
+     */
+    public final String getRootDirectoryAsString() {
+        return root;
+    }
+
+    /**
+     * Get the root path for this tinyhttp server. The root path is used to find static files if
+     * no method in the {@link me.eddiep.tinyhttp.TinyListener} class handled the client's request.
+     * @return The root directory as a {@link java.io.File}
+     */
+    public final File getRootDirectoryAsFile() {
+        return new File(root);
+    }
+
+
+    /**
+     * Set the root path for this tinyhttp server. The root path is used to find static files if
+     * no method in the {@link me.eddiep.tinyhttp.TinyListener} class handled the client's request. <br></br>
+     * If the root directory does not exist, then the directory and any necessary nonexistent parent directories will be made
+     *
+     * @see java.io.File#mkdirs()
+     * @param dir The directory to use as the root directory, as a {@link java.io.File}
+     */
+    public final void setRootDirectory(File dir) {
+        if (!dir.isDirectory())
+            throw new IllegalArgumentException("The root provided is not a directory!");
+        if (!dir.exists()) {
+            if (!dir.mkdirs())
+                throw new RuntimeException("Failed to create root directory!");
+        }
+        root = dir.getAbsolutePath();
+    }
+
+    /**
+     * Set the root path for this tinyhttp server. The root path is used to find static files if
+     * no method in the {@link me.eddiep.tinyhttp.TinyListener} class handled the client's request. <br></br>
+     * This method simply creates a {@link java.io.File} object with the specified path and invokes {@link me.eddiep.tinyhttp.TinyHttpServer#setRootDirectory(java.io.File)}
+     * @param path The path to use as the root directory, as a {@link java.lang.String}
+     */
+    public final void setRootDirectory(String path) {
+        File dir = new File(path);
+        setRootDirectory(dir);
+    }
+
+    /**
+     * Indicates whether or not this tinyhttp server will process all requests ignored by the {@link me.eddiep.tinyhttp.TinyListener}
+     * class by looking for a file in the root directory specified in {@link TinyHttpServer#getRootDirectoryAsFile()}
+     * @return If true, then this tinyhttp server will serve the filesystem when the {@link me.eddiep.tinyhttp.TinyListener} class ignores the request
+     */
+    public final boolean isServingFileSystem() {
+        return serveFileSystem;
+    }
+
+    /**
+     * Set whether or not this tinyhttp server will process all requests ignored by the {@link me.eddiep.tinyhttp.TinyListener}
+     * class by looking for a file in the root directory specified in {@link TinyHttpServer#getRootDirectoryAsFile()}
+     * @param value  If true, then this tinyhttp server will serve the filesystem when the {@link me.eddiep.tinyhttp.TinyListener} class ignores the request
+     */
+    public final void serveFileSystem(boolean value) {
+        this.serveFileSystem = value;
+
+        if (serveFileSystem && !MimeTypes.isLoaded())
+            MimeTypes.loadMimeTypes();
     }
 
     /**
@@ -219,6 +308,16 @@ public class TinyHttpServer {
         return df.format(today);
     }
 
+    private byte[] read(File file) throws IOException {
+        byte[] buffer = new byte[(int) file.length()];
+        InputStream ios = new FileInputStream(file);
+        if (ios.read(buffer) == -1)
+            throw new IOException("EOF reached while trying to read whole file!");
+        ios.close();
+
+        return buffer;
+    }
+
     /**
      * Handle a requestPath sent by a client
      * @param request The requestPath info sent by the client
@@ -248,6 +347,36 @@ public class TinyHttpServer {
                     }
                     return respond;
                 }
+            }
+        }
+
+        if (serveFileSystem) {
+            String temp = request.getRequestPath().substring(1);
+            if (temp.equals(""))
+                temp = "index.html";
+            String path = root + temp;
+
+            File file = new File(path);
+            if (file.exists()) {
+                try {
+                    String mime = MimeTypes.getMimeTypeFor(file);
+                    if (mime == null)
+                        mime = "text/html";
+
+                    respond.setRawContent(read(file));
+                    respond.setStatusCode(StatusCode.OK);
+                    respond.setContentType(mime);
+                } catch (AccessDeniedException e) {
+                    respond.setStatusCode(StatusCode.Forbidden);
+                    System.err.println("Error serving request for " + request.getClient().getSocket().getInetAddress() + " requesting " + request.getRequestPath());
+                    e.printStackTrace();
+                } catch (IOException e) {
+                    System.err.println("Error serving request for " + request.getClient().getSocket().getInetAddress() + " requesting " + request.getRequestPath());
+                    respond.setStatusCode(StatusCode.InternalServerError);
+                    e.printStackTrace();
+                }
+
+                return respond;
             }
         }
 

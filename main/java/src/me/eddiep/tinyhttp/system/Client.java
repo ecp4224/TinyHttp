@@ -4,13 +4,13 @@ import me.eddiep.tinyhttp.TinyHttpServer;
 
 import java.io.*;
 import java.net.Socket;
+import java.nio.charset.Charset;
 
 public class Client {
     private boolean started;
     private Thread thread;
     private Socket client;
     private TinyHttpServer server;
-    private BufferedWriter writer;
     private BufferedReader reader;
 
     public Client(Socket client, TinyHttpServer server) {
@@ -82,7 +82,6 @@ public class Client {
 
     protected void onClose() {
         try {
-            writer.close();
             reader.close();
 
             client.close();
@@ -95,7 +94,6 @@ public class Client {
         @Override
         public void run() {
             try {
-                writer = new BufferedWriter(new OutputStreamWriter(client.getOutputStream()));
                 reader = new BufferedReader(new InputStreamReader(client.getInputStream()));
 
                 String request = reader.readLine();
@@ -123,22 +121,41 @@ public class Client {
                     }
                 }
 
+                String encoding = "utf-8";
+                if (requestInfo.hasHeader("Accept-Charset"))
+                    encoding = requestInfo.getHeaderValue("Accept-Charset");
+
                 Response respond = new Response(Client.this);
                 respond = server.invokeForRequest(requestInfo, respond);
 
                 if (!respond.hasHeader("Content-Type"))
                     respond.addHeader("Content-Type", "text/html; charset=UTF-8");
 
-                respond.addHeader("Content-Length", "" + respond.getContent().length());
+                if (respond.rawContents != null)
+                    respond.addHeader("Content-Length", "" + respond.rawContents.length);
+                else
+                    respond.addHeader("Content-Length", "" + respond.getContent().length());
 
                 String raw = "HTTP/1.1 " + respond.getStatusCode().getCode() + " " + respond.getStatusCode().getName() + "\n";
                 for (String property : respond.getHeaders().keySet()) {
                     raw += property + ": " + respond.getHeaders().get(property) + "\n";
                 }
-                raw += "\n" + respond.getContent();
+                raw += "\n";
 
-                writer.write(raw);
-                writer.flush();
+                if (respond.rawContents != null) {
+                    byte[] rawHeaderData = raw.getBytes(Charset.forName("ASCII"));
+
+                    client.getOutputStream().write(rawHeaderData);
+                    client.getOutputStream().write(respond.rawContents);
+                } else {
+                    byte[] rawHeaderData = raw.getBytes(Charset.forName("ASCII"));
+                    byte[] rawContent = respond.getContent().getBytes(Charset.forName(encoding));
+
+                    client.getOutputStream().write(rawHeaderData);
+                    client.getOutputStream().write(rawContent);
+                }
+
+                client.getOutputStream().flush();
             } catch (IOException e) {
                 e.printStackTrace();
             } finally {
