@@ -3,9 +3,9 @@ package me.eddiep.tinyhttp.test.impl;
 import me.eddiep.tinyhttp.TinyListener;
 import me.eddiep.tinyhttp.annotations.GetHandler;
 import me.eddiep.tinyhttp.annotations.PostHandler;
-import me.eddiep.tinyhttp.system.Request;
-import me.eddiep.tinyhttp.system.Response;
-import me.eddiep.tinyhttp.system.StatusCode;
+import me.eddiep.tinyhttp.net.Request;
+import me.eddiep.tinyhttp.net.Response;
+import me.eddiep.tinyhttp.net.http.StatusCode;
 
 public class DefaultTinyListener implements TinyListener {
 

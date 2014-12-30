@@ -1,4 +1,4 @@
-package me.eddiep.tinyhttp.system;
+package me.eddiep.tinyhttp.net.http;
 
 /**
  * Server status codes that can be responded with.

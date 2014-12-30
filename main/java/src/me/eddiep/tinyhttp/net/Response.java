@@ -1,10 +1,14 @@
-package me.eddiep.tinyhttp.system;
+package me.eddiep.tinyhttp.net;
+
+import me.eddiep.tinyhttp.net.http.StatusCode;
 
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
 public class Response {
+    StreamResponse streamResponse;
+
     private String content = "";
     byte[] rawContents;
     private Client client;
@@ -13,6 +17,14 @@ public class Response {
 
     Response(Client client) {
         this.client = client;
+    }
+
+    Response(Response response) {
+        this.content = response.content;
+        this.rawContents = response.rawContents;
+        this.client = response.client;
+        this.statusCode = response.statusCode;
+        this.headers = response.headers;
     }
 
     /**
@@ -25,7 +37,7 @@ public class Response {
 
     /**
      * Set the status code for this response
-     * @param code The {@link me.eddiep.tinyhttp.system.StatusCode}
+     * @param code The {@link me.eddiep.tinyhttp.net.http.StatusCode}
      */
     public void setStatusCode(StatusCode code) {
         this.statusCode = code;
@@ -43,6 +55,39 @@ public class Response {
     }
 
     /**
+     * Create a new {@link me.eddiep.tinyhttp.net.StreamResponse} object. <br></br>
+     * A stream response allows you to stream large data in real time to the client as a response. You can begin to write
+     * data by setting the contentLength using {@link me.eddiep.tinyhttp.net.StreamResponse#setContentLength(long)} and then by
+     * calling {@link StreamResponse#startStream()} and writing to the returned {@link java.io.OutputStream}
+     *
+     * @see StreamResponse#startStream()
+     * @return A new {@link me.eddiep.tinyhttp.net.StreamResponse} object
+     */
+    public StreamResponse createStreamResponse() {
+        if (streamResponse != null)
+            throw new IllegalStateException("A StreamResponse object has already been created for this response!");
+
+        streamResponse = new StreamResponse(this);
+
+        return streamResponse;
+    }
+
+    /**
+     * Create a new {@link me.eddiep.tinyhttp.net.StreamResponse} object with the specified contentLength. <br></br>
+     * A stream response allows you to stream large data in real time to the client as a response. You can begin to write
+     * data by calling {@link StreamResponse#startStream()} and writing to the returned {@link java.io.OutputStream}
+     *
+     * @see StreamResponse#startStream()
+     * @return A new {@link me.eddiep.tinyhttp.net.StreamResponse} object
+     */
+    public StreamResponse createStreamResponse(long contentLength) {
+        StreamResponse r = createStreamResponse();
+        r.setContentLength(contentLength);
+
+        return r;
+    }
+
+    /**
      * Set the content type of this response.
      * @param type The content type of this response as a {@link java.lang.String}
      */
@@ -52,7 +97,7 @@ public class Response {
 
     /**
      * Get the current status code for this response
-     * @return The {@link me.eddiep.tinyhttp.system.StatusCode} set for this response
+     * @return The {@link me.eddiep.tinyhttp.net.http.StatusCode} set for this response
      */
     public StatusCode getStatusCode() {
         return statusCode;

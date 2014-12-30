@@ -4,14 +4,16 @@ import me.eddiep.tinyhttp.annotations.DeleteHandler;
 import me.eddiep.tinyhttp.annotations.GetHandler;
 import me.eddiep.tinyhttp.annotations.PostHandler;
 import me.eddiep.tinyhttp.annotations.PutHandler;
-import me.eddiep.tinyhttp.system.*;
+import me.eddiep.tinyhttp.net.*;
+import me.eddiep.tinyhttp.net.http.HttpMethod;
+import me.eddiep.tinyhttp.net.http.MimeTypes;
+import me.eddiep.tinyhttp.net.http.StatusCode;
 
 import java.io.*;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.nio.ByteBuffer;
 import java.nio.file.AccessDeniedException;
 import java.security.InvalidParameterException;
 import java.text.DateFormat;
@@ -24,6 +26,7 @@ import java.util.*;
  */
 public class TinyHttpServer {
     private boolean serveFileSystem = true;
+    private int bufferDataLength = 1024;
     private String root = "";
     private ArrayList<Client> connectedClients = new ArrayList<Client>();
     private int port;
@@ -135,6 +138,24 @@ public class TinyHttpServer {
 
         if (serveFileSystem && !MimeTypes.isLoaded())
             MimeTypes.loadMimeTypes();
+    }
+
+    /**
+     * Get the buffer length used when sending large files. tinyhttp only uses this when {@link TinyHttpServer#isServingFileSystem()} is true and
+     * when sending large data.
+     * @return The buffer data length used when sending large data
+     */
+    public final int getBufferDataLength() {
+        return bufferDataLength;
+    }
+
+    /**
+     * Set the buffer length used when sending large files. tinyhttp only uses this when {@link TinyHttpServer#isServingFileSystem()} is true and
+     * when sending large data.
+     * @param length The buffer data length to use
+     */
+    public final void setBufferDataLength(int length) {
+        this.bufferDataLength = length;
     }
 
     /**
@@ -260,7 +281,7 @@ public class TinyHttpServer {
 
         Method[] methods = listener.getClass().getDeclaredMethods();
         for (Method m : methods) {
-            if (m.getParameterTypes().length != 2 || m.getParameterTypes()[0] != me.eddiep.tinyhttp.system.Request.class || m.getParameterTypes()[1] != Response.class) continue;
+            if (m.getParameterTypes().length != 2 || m.getParameterTypes()[0] != me.eddiep.tinyhttp.net.Request.class || m.getParameterTypes()[1] != Response.class) continue;
 
             GetHandler get = m.getAnnotation(GetHandler.class);
             DeleteHandler delete = m.getAnnotation(DeleteHandler.class);
@@ -308,14 +329,26 @@ public class TinyHttpServer {
         return df.format(today);
     }
 
-    private byte[] read(File file) throws IOException {
-        byte[] buffer = new byte[(int) file.length()];
-        InputStream ios = new FileInputStream(file);
-        if (ios.read(buffer) == -1)
-            throw new IOException("EOF reached while trying to read whole file!");
-        ios.close();
+    private void read(File file, Response respond) throws IOException {
+        if (file.length() >= Integer.MAX_VALUE) {
+            StreamResponse streamResponse = respond.createStreamResponse(file.length());
 
-        return buffer;
+            byte[] buffer = new byte[bufferDataLength];
+            InputStream ios = new FileInputStream(file);
+            OutputStream out = streamResponse.startStream();
+            int read;
+            while ((read = ios.read(buffer)) != -1)
+                out.write(buffer, 0, read);
+            ios.close();
+        } else {
+            byte[] buffer = new byte[(int) file.length()];
+            InputStream ios = new FileInputStream(file);
+            if (ios.read(buffer) == -1)
+                throw new IOException("EOF reached while trying to read whole file!");
+            ios.close();
+
+            respond.setRawContent(buffer);
+        }
     }
 
     /**
@@ -361,11 +394,11 @@ public class TinyHttpServer {
                 try {
                     String mime = MimeTypes.getMimeTypeFor(file);
                     if (mime == null)
-                        mime = "text/html";
+                        mime = "application/octet-stream";
 
-                    respond.setRawContent(read(file));
                     respond.setStatusCode(StatusCode.OK);
                     respond.setContentType(mime);
+                    read(file, respond);
                 } catch (AccessDeniedException e) {
                     respond.setStatusCode(StatusCode.Forbidden);
                     System.err.println("Error serving request for " + request.getClient().getSocket().getInetAddress() + " requesting " + request.getRequestPath());

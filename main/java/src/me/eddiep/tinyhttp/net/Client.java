@@ -1,6 +1,7 @@
-package me.eddiep.tinyhttp.system;
+package me.eddiep.tinyhttp.net;
 
 import me.eddiep.tinyhttp.TinyHttpServer;
+import me.eddiep.tinyhttp.net.http.HttpMethod;
 
 import java.io.*;
 import java.net.Socket;
@@ -126,36 +127,43 @@ public class Client {
                     encoding = requestInfo.getHeaderValue("Accept-Charset");
 
                 Response respond = new Response(Client.this);
-                respond = server.invokeForRequest(requestInfo, respond);
 
-                if (!respond.hasHeader("Content-Type"))
-                    respond.addHeader("Content-Type", "text/html; charset=UTF-8");
-
-                if (respond.rawContents != null)
-                    respond.addHeader("Content-Length", "" + respond.rawContents.length);
-                else
-                    respond.addHeader("Content-Length", "" + respond.getContent().length());
-
-                String raw = "HTTP/1.1 " + respond.getStatusCode().getCode() + " " + respond.getStatusCode().getName() + "\n";
-                for (String property : respond.getHeaders().keySet()) {
-                    raw += property + ": " + respond.getHeaders().get(property) + "\n";
-                }
-                raw += "\n";
-
-                if (respond.rawContents != null) {
-                    byte[] rawHeaderData = raw.getBytes(Charset.forName("ASCII"));
-
-                    client.getOutputStream().write(rawHeaderData);
-                    client.getOutputStream().write(respond.rawContents);
+                if (respond instanceof StreamResponse && ((StreamResponse)respond).getOutputStream() != null) {
+                    ((StreamResponse)respond).getOutputStream().flush();
+                } else if (respond.streamResponse != null && respond.streamResponse.getOutputStream() != null) {
+                    respond.streamResponse.getOutputStream().flush();
                 } else {
-                    byte[] rawHeaderData = raw.getBytes(Charset.forName("ASCII"));
-                    byte[] rawContent = respond.getContent().getBytes(Charset.forName(encoding));
+                    respond = server.invokeForRequest(requestInfo, respond);
 
-                    client.getOutputStream().write(rawHeaderData);
-                    client.getOutputStream().write(rawContent);
+                    if (!respond.hasHeader("Content-Type"))
+                        respond.addHeader("Content-Type", "text/html; charset=UTF-8");
+
+                    if (respond.rawContents != null)
+                        respond.addHeader("Content-Length", "" + respond.rawContents.length);
+                    else
+                        respond.addHeader("Content-Length", "" + respond.getContent().length());
+
+                    String raw = "HTTP/1.1 " + respond.getStatusCode().getCode() + " " + respond.getStatusCode().getName() + "\n";
+                    for (String property : respond.getHeaders().keySet()) {
+                        raw += property + ": " + respond.getHeaders().get(property) + "\n";
+                    }
+                    raw += "\n";
+
+                    if (respond.rawContents != null) {
+                        byte[] rawHeaderData = raw.getBytes(Charset.forName("ASCII"));
+
+                        client.getOutputStream().write(rawHeaderData);
+                        client.getOutputStream().write(respond.rawContents);
+                    } else {
+                        byte[] rawHeaderData = raw.getBytes(Charset.forName("ASCII"));
+                        byte[] rawContent = respond.getContent().getBytes(Charset.forName(encoding));
+
+                        client.getOutputStream().write(rawHeaderData);
+                        client.getOutputStream().write(rawContent);
+                    }
+
+                    client.getOutputStream().flush();
                 }
-
-                client.getOutputStream().flush();
             } catch (IOException e) {
                 e.printStackTrace();
             } finally {

@@ -1,7 +1,6 @@
-package me.eddiep.tinyhttp.system;
+package me.eddiep.tinyhttp.net.http;
 
 import java.io.File;
-import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Scanner;
 

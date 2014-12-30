@@ -1,6 +1,7 @@
-package me.eddiep.tinyhttp.system;
+package me.eddiep.tinyhttp.net;
 
 import me.eddiep.tinyhttp.TinyHttpServer;
+import me.eddiep.tinyhttp.net.http.HttpMethod;
 
 import java.util.HashMap;
 
@@ -56,8 +57,8 @@ public class Request {
     }
 
     /**
-     * Get the {@link me.eddiep.tinyhttp.system.HttpMethod} the client requested.
-     * @return The {@link me.eddiep.tinyhttp.system.HttpMethod} this client requested
+     * Get the {@link me.eddiep.tinyhttp.net.http.HttpMethod} the client requested.
+     * @return The {@link me.eddiep.tinyhttp.net.http.HttpMethod} this client requested
      */
     public HttpMethod getRequestMethod() {
         return method;
