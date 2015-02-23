@@ -19,13 +19,13 @@ An example listener class looks something like this:
 public class DefaultTinyListener implements TinyListener {
 
     @GetHandler(request = "/wat.*")
-    public void defaultGet(RequestInfo info, Respond respond) {
-        respond.echo("hi");
+    public void defaultGet(Request request, Response response) {
+        response.echo("hi");
     }
 
     @GetHandler(request = "/index.html|/")
-    public void index(RequestInfo info, Respond respond) {
-        respond.echo(
+    public void index(Request request, Response response) {
+        response.echo(
                 "<html>\n" +
                 "    <body>\n" +
                 "        <h1>Hello " + info.getClient().getSocket().getInetAddress().toString().substring(1) + "!</h1>\n" +
@@ -36,9 +36,9 @@ public class DefaultTinyListener implements TinyListener {
 
     @GetHandler(request = "/api/[a-z]+")
     @PostHandler(request = "/api/[a-z]+")
-    public void api(RequestInfo info, Respond respond) {
-        respond.setStatusCode(StatusCode.Found);
-        respond.echo("You requested " + info.getFileRequest());
+    public void api(Request request, Response response) {
+        response.setStatusCode(StatusCode.Found);
+        response.echo("You requested " + info.getFileRequest());
     }
 }
 ```
