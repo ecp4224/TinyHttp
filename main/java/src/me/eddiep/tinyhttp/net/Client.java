@@ -126,12 +126,7 @@ public class Client {
                 }
 
                 if ((requestInfo.getRequestMethod() == HttpMethod.POST || requestInfo.getRequestMethod() == HttpMethod.PUT) && requestInfo.hasHeader("Content-Length")) {
-                    long length = Long.parseLong(requestInfo.getHeaderValue("Content-Length"));
-
-                    long skipped = client.getInputStream().skip(readCount);
-                    if (skipped > 0) {
-                        requestInfo.setRawContentStream(client.getInputStream());
-                    }
+                    requestInfo.setRawContentStream(client.getInputStream());
                 }
 
                 String encoding = "utf-8";
