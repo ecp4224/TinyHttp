@@ -38,7 +38,7 @@ public class DefaultTinyListener implements TinyListener {
     @PostHandler(request = "/api/[a-z]+")
     public void api(Request request, Response response) {
         response.setStatusCode(StatusCode.Found);
-        response.echo("You requested " + info.getFileRequest());
+        response.echo("You requested " + request.getFileRequest());
     }
 }
 ```
