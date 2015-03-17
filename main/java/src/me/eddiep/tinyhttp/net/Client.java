@@ -95,6 +95,12 @@ public class Client {
         @Override
         public void run() {
             try {
+                /*byte[] test = new byte[65536];
+                int i = client.getInputStream().read(test);
+                for (int z = 0; z < i; z++) {
+                    System.out.print((char)test[z]);
+                }*/
+
                 reader = new BufferedReader(new InputStreamReader(client.getInputStream()));
 
                 int readCount = 0;
@@ -114,7 +120,7 @@ public class Client {
 
                 String line;
                 while ((line = reader.readLine()) != null) {
-                    if (line.equals(""))
+                    if (line.trim().equals(""))
                         break;
                     if (line.split(":").length > 1) {
                         String property = line.split(":")[0].trim();
@@ -126,7 +132,7 @@ public class Client {
                 }
 
                 if ((requestInfo.getRequestMethod() == HttpMethod.POST || requestInfo.getRequestMethod() == HttpMethod.PUT) && requestInfo.hasHeader("Content-Length")) {
-                    requestInfo.setRawContentStream(client.getInputStream());
+                    requestInfo.setRawContentStream(reader);
                 }
 
                 String encoding = "utf-8";
@@ -150,11 +156,11 @@ public class Client {
                     else
                         respond.addHeader("Content-Length", "" + respond.getContent().length());
 
-                    String raw = "HTTP/1.1 " + respond.getStatusCode().getCode() + " " + respond.getStatusCode().getName() + "\n";
+                    String raw = "HTTP/1.1 " + respond.getStatusCode().getCode() + " " + respond.getStatusCode().getName() + "\r\n";
                     for (String property : respond.getHeaders().keySet()) {
-                        raw += property + ": " + respond.getHeaders().get(property) + "\n";
+                        raw += property + ": " + respond.getHeaders().get(property) + "\r\n";
                     }
-                    raw += "\n";
+                    raw += "\r\n";
 
                     if (respond.rawContents != null) {
                         byte[] rawHeaderData = raw.getBytes(Charset.forName("ASCII"));

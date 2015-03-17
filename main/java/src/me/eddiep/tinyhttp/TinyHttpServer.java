@@ -30,7 +30,7 @@ public class TinyHttpServer {
     private String root = "";
     private ArrayList<Client> connectedClients = new ArrayList<Client>();
     private int port;
-    private int timeout = 300000;
+    private int timeout = 5000;
     private boolean running;
     private ServerSocket server;
     private boolean threaded = true;
