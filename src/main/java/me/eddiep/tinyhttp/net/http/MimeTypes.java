@@ -6,13 +6,8 @@ import java.util.Scanner;
 
 public class MimeTypes {
     private static HashMap<String, String> mime = new HashMap<String, String>();
-    private static boolean loaded;
 
-    public static void loadMimeTypes() {
-        if (loaded)
-            throw new IllegalStateException("loadMimeTypes has already been invoked!");
-
-        loaded = true;
+    static {
         String[] lines = new Scanner(MimeTypes.class.getClassLoader().getResourceAsStream("mime.types"), "UTF-8").useDelimiter("\\A").next().split("\n");
 
         for (String line : lines) {
@@ -49,9 +44,5 @@ public class MimeTypes {
 
 
         return mime.get(ext);
-    }
-
-    public static boolean isLoaded() {
-        return loaded;
     }
 }

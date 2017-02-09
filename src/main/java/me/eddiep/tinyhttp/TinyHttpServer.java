@@ -66,9 +66,6 @@ public class TinyHttpServer {
         this.port = port;
         this.listener = listener;
         this.serveFileSystem = serveFileSystem;
-
-        if (serveFileSystem)
-            MimeTypes.loadMimeTypes();
     }
 
     /**
@@ -135,9 +132,6 @@ public class TinyHttpServer {
      */
     public final void serveFileSystem(boolean value) {
         this.serveFileSystem = value;
-
-        if (serveFileSystem && !MimeTypes.isLoaded())
-            MimeTypes.loadMimeTypes();
     }
 
     /**
