@@ -2,12 +2,13 @@ package me.eddiep.tinyhttp.net;
 
 import me.eddiep.tinyhttp.TinyHttpServer;
 import me.eddiep.tinyhttp.net.http.HttpMethod;
+import me.eddiep.tinyhttp.net.http.MimeTypes;
+import me.eddiep.tinyhttp.net.http.StatusCode;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.net.SocketException;
 import java.nio.charset.Charset;
+import java.nio.file.AccessDeniedException;
 import java.util.HashMap;
 
 public class Request {
@@ -143,5 +144,64 @@ public class Request {
      */
     public String getHeaderValue(String header) {
         return headers.get(header);
+    }
+
+    public Response serveFile(String filePath, Response respond) {
+        if (filePath == null || filePath.isEmpty())
+            filePath = "index.html";
+
+        String path = server.getRootDirectoryAsString() + filePath;
+
+        File file = new File(path);
+        return serveFile(file, respond);
+    }
+
+    public Response serveFile(File file, Response respond) {
+        if (file.exists()) {
+            try {
+                String mime = MimeTypes.getMimeTypeFor(file);
+                if (mime == null)
+                    mime = "application/octet-stream";
+
+                respond.setStatusCode(StatusCode.OK);
+                respond.setContentType(mime);
+                readIntoResponse(file, respond);
+            } catch (AccessDeniedException e) {
+                respond.setStatusCode(StatusCode.Forbidden);
+                System.err.println("Error serving request for " + getClient().getSocket().getInetAddress() + " requesting " + getRequestPath());
+                e.printStackTrace();
+            } catch (IOException e) {
+                System.err.println("Error serving request for " + getClient().getSocket().getInetAddress() + " requesting " + getRequestPath());
+                respond.setStatusCode(StatusCode.InternalServerError);
+                e.printStackTrace();
+            }
+
+            return respond;
+        }
+
+        respond.setStatusCode(StatusCode.NotFound);
+        return respond;
+    }
+
+    protected void readIntoResponse(File file, Response respond) throws IOException {
+        if (file.length() >= Integer.MAX_VALUE) {
+            StreamResponse streamResponse = respond.createStreamResponse(file.length());
+
+            byte[] buffer = new byte[server.getBufferDataLength()];
+            InputStream ios = new FileInputStream(file);
+            OutputStream out = streamResponse.startStream();
+            int read;
+            while ((read = ios.read(buffer)) != -1)
+                out.write(buffer, 0, read);
+            ios.close();
+        } else {
+            byte[] buffer = new byte[(int) file.length()];
+            InputStream ios = new FileInputStream(file);
+            if (ios.read(buffer) == -1)
+                throw new IOException("EOF reached while trying to read whole file!");
+            ios.close();
+
+            respond.setRawContent(buffer);
+        }
     }
 }

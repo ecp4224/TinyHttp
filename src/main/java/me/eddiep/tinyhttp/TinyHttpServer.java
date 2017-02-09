@@ -279,6 +279,9 @@ public class TinyHttpServer {
     protected void onStart() {
         toInvoke = new ArrayList<RequestHolder>();
 
+        if (listener == null)
+            return;
+
         Method[] methods = listener.getClass().getDeclaredMethods();
         for (Method m : methods) {
             if (m.getParameterTypes().length != 2 || m.getParameterTypes()[0] != me.eddiep.tinyhttp.net.Request.class || m.getParameterTypes()[1] != Response.class) continue;
@@ -329,28 +332,6 @@ public class TinyHttpServer {
         return df.format(today);
     }
 
-    private void read(File file, Response respond) throws IOException {
-        if (file.length() >= Integer.MAX_VALUE) {
-            StreamResponse streamResponse = respond.createStreamResponse(file.length());
-
-            byte[] buffer = new byte[bufferDataLength];
-            InputStream ios = new FileInputStream(file);
-            OutputStream out = streamResponse.startStream();
-            int read;
-            while ((read = ios.read(buffer)) != -1)
-                out.write(buffer, 0, read);
-            ios.close();
-        } else {
-            byte[] buffer = new byte[(int) file.length()];
-            InputStream ios = new FileInputStream(file);
-            if (ios.read(buffer) == -1)
-                throw new IOException("EOF reached while trying to read whole file!");
-            ios.close();
-
-            respond.setRawContent(buffer);
-        }
-    }
-
     /**
      * Handle a requestPath sent by a client
      * @param request The requestPath info sent by the client
@@ -384,33 +365,8 @@ public class TinyHttpServer {
         }
 
         if (serveFileSystem) {
-            String temp = request.getRequestPath().substring(1);
-            if (temp.equals(""))
-                temp = "index.html";
-            String path = root + temp;
-
-            File file = new File(path);
-            if (file.exists()) {
-                try {
-                    String mime = MimeTypes.getMimeTypeFor(file);
-                    if (mime == null)
-                        mime = "application/octet-stream";
-
-                    respond.setStatusCode(StatusCode.OK);
-                    respond.setContentType(mime);
-                    read(file, respond);
-                } catch (AccessDeniedException e) {
-                    respond.setStatusCode(StatusCode.Forbidden);
-                    System.err.println("Error serving request for " + request.getClient().getSocket().getInetAddress() + " requesting " + request.getRequestPath());
-                    e.printStackTrace();
-                } catch (IOException e) {
-                    System.err.println("Error serving request for " + request.getClient().getSocket().getInetAddress() + " requesting " + request.getRequestPath());
-                    respond.setStatusCode(StatusCode.InternalServerError);
-                    e.printStackTrace();
-                }
-
-                return respond;
-            }
+            String path = request.getRequestPath().substring(1);
+            return request.serveFile(path, respond);
         }
 
         respond.setStatusCode(StatusCode.NotFound);
